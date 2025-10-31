@@ -1,3 +1,4 @@
+
 const playerOne = {
   name: "Player X",
   mark: "X",
@@ -23,9 +24,9 @@ function switchPlayer() {
 
 function GameBoard() {
   const Board = [
-    [" ", " ", " "],
-    [" ", " ", " "],
-    [" ", " ", " "],
+    ["", "", ""],
+    ["", "", ""],
+    ["", "", ""],
   ];
   function getBoard() {
     return Board;
@@ -33,8 +34,88 @@ function GameBoard() {
   return { getBoard };
 }
 
-function GameController() {
-  // Logic can be added later
+function GameController(boardArea, playerControl, playerStatus, gameStatus) {
+  let board = [
+    ["", "", ""],
+    ["", "", ""],
+    ["", "", ""],
+  ];
+  let gameOver = false;
+
+  // check winner or draw
+  function checkWinner() {
+    const winPatterns = [
+      // rows
+      [[0, 0], [0, 1], [0, 2]],
+      [[1, 0], [1, 1], [1, 2]],
+      [[2, 0], [2, 1], [2, 2]],
+      // columns
+      [[0, 0], [1, 0], [2, 0]],
+      [[0, 1], [1, 1], [2, 1]],
+      [[0, 2], [1, 2], [2, 2]],
+      // diagonals
+      [[0, 0], [1, 1], [2, 2]],
+      [[0, 2], [1, 1], [2, 0]],
+    ];
+
+    for (let pattern of winPatterns) {
+      const [a, b, c] = pattern;
+      if (
+        board[a[0]][a[1]] &&
+        board[a[0]][a[1]] === board[b[0]][b[1]] &&
+        board[a[0]][a[1]] === board[c[0]][c[1]]
+      ) {
+        return board[a[0]][a[1]];
+      }
+    }
+
+    const allFilled = board.flat().every(cell => cell !== "");
+    return allFilled ? "draw" : null;
+  }
+
+  function handleMove(row, col, cell) {
+    if (gameOver || board[row][col] !== "") return;
+
+    const current = playerControl.getCurrentPlayer();
+    board[row][col] = current.mark;
+    cell.textContent = current.mark;
+
+    const result = checkWinner();
+    if (result) {
+      gameOver = true;
+      if (result === "draw") {
+        gameStatus.textContent = "It's a Draw!";
+      } else {
+        gameStatus.textContent = current.name + " Wins!";
+      }
+      return;
+    }
+
+    playerControl.togglePlayer();
+    const next = playerControl.getCurrentPlayer();
+    playerStatus.textContent = next.name + " turn";
+  }
+
+  const cells = boardArea.querySelectorAll(".cell");
+  cells.forEach((cell, index) => {
+    const row = Math.floor(index / 3);
+    const col = index % 3;
+    cell.addEventListener("click", () => handleMove(row, col, cell));
+  });
+
+  function restartGame() {
+    board = [
+      ["", "", ""],
+      ["", "", ""],
+      ["", "", ""],
+    ];
+    gameOver = false;
+    gameStatus.textContent = "Game restarted";
+    playerStatus.textContent = playerControl.getCurrentPlayer().name + " turn";
+    cells.forEach(cell => (cell.textContent = ""));
+  }
+
+  return { restartGame };
 }
 
 function GameDisplay() {
@@ -65,7 +146,6 @@ function GameDisplay() {
   boardArea.style.gap = "1px";
   boardArea.style.backgroundColor = "black";
 
-  // Create 9 cells
   for (let i = 1; i <= 9; i++) {
     const cell = document.createElement("div");
     cell.classList.add("cell");
@@ -77,18 +157,6 @@ function GameDisplay() {
     cell.style.justifyContent = "center";
     cell.style.fontSize = "32px";
     cell.style.cursor = "pointer";
-    cell.textContent = "";
-
-    cell.addEventListener("click", () => {
-      if (cell.textContent === "") {
-        const current = playerControl.getCurrentPlayer();
-        cell.textContent = current.mark;
-        playerControl.togglePlayer();
-        const next = playerControl.getCurrentPlayer();
-        playerStatus.textContent = next.name + " turn";
-      }
-    });
-
     boardArea.appendChild(cell);
   }
 
@@ -102,17 +170,15 @@ function GameDisplay() {
   restartButton.style.backgroundColor = "grey";
   restartButton.style.fontSize = "20px";
   restartButton.style.padding = "5px 15px";
-  restartButton.addEventListener("click", () => {
-    document.querySelectorAll(".cell").forEach((c) => (c.textContent = ""));
-    gameStatus.textContent = "Game restarted";
-  });
 
   gameArea.appendChild(playerStatus);
   gameArea.appendChild(boardArea);
   gameArea.appendChild(gameStatus);
   gameArea.appendChild(restartButton);
-
   document.body.appendChild(gameArea);
+
+  const controller = GameController(boardArea, playerControl, playerStatus, gameStatus);
+  restartButton.addEventListener("click", controller.restartGame);
 }
 
 GameDisplay();
